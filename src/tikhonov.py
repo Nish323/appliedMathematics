@@ -87,11 +87,13 @@ def tikhonov(img, angle_division, s_division, alpha, sg_error ): #逆問題を�
   return imgt
 #####################################################
 #
-aa = np.array(Image.open('shepploganphantom128.png').convert('L'))
+img_pil = Image.open('img/image.png').convert('L')
+img_pil = img_pil.resize((128, 128)) 
+aa = np.array(img_pil)
 bb = 80 # 角分割数
 cc = 120 # 位置分割数
 dd = 100.00 # 正則化パラメータ
 rerror = 0.01 #誤差レベル
-reconstruct = tikhonov(aa,bb, cc, dd)
+reconstruct = tikhonov(aa,bb, cc, dd, rerror)
 pil_img = Image.fromarray(reconstruct.astype(np.uint8)) #画像として出力
-pil_img.save('reco_shepplogan_80_120_10000_er005.png') #画像をpngファイルで保存, ファイル名は適宜変更
+pil_img.save('img/image_moto.png')

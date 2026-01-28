@@ -8,8 +8,8 @@ def calc_matrixA_optimized(figuresize, angle_division, s_division):
     num_s = s_division - 1
     
     # 角度とsのサンプリング
-    m = np.arange(1, angle_division)
-    omega_aux = (-np.pi / 2) + (m * np.pi / angle_division)
+    m = np.arange(num_angles)
+    omega_aux = (-np.pi / 2) + ((m + 1) * np.pi / angle_division)
     
     # omegaの計算 (ベクトル化)
     abs_omega_aux = np.abs(omega_aux)
@@ -20,68 +20,67 @@ def calc_matrixA_optimized(figuresize, angle_division, s_division):
     cosp = np.cos(omega)
     sinp = np.sin(omega)
     
-    n = np.arange(1, s_division)
-    sn = (-np.sqrt(2) * domainsizemax) + ((2 * n * np.sqrt(2) * domainsizemax) / s_division)
+    n = np.arange(num_s)
+    sn = (-np.sqrt(2) * domainsizemax) + ((2 * (n + 1) * np.sqrt(2) * domainsizemax) / s_division)
     
-    # 画像座標のグリッド作成 (i: x方向, j: y方向)
+    # --- ここが重要：元のコードの i, j の並び順を再現 ---
+    # 元コード: i方向(x)が外側ループ、j方向(y)が内側ループ
+    # A[..., i * figuresize + j] というインデックスに対応させる
     i_idx = np.arange(figuresize)
     j_idx = np.arange(figuresize)
-    ii, jj = np.meshgrid(i_idx, j_idx, indexing='ij')
+    ii, jj = np.meshgrid(i_idx, j_idx, indexing='ij') # indexing='ij' で i, j の順を維持
     
-    # 座標の物理値
     pos_x = -domainsizemax + 0.5 + ii.flatten()
     pos_y = domainsizemax - 0.5 - jj.flatten()
     
     A = np.zeros((num_angles * num_s, figuresize**2))
+    eps = 1e-10 # 0割り防止
     
     for idx_m in range(num_angles):
-        # distの計算を一括で行う (1, figuresize^2)
+        # distの計算を一括で行う (num_s, figuresize^2)
         dist = np.abs(cosm[idx_m] * pos_x + sinm[idx_m] * pos_y - sn[:, np.newaxis])
         
-        # 条件分岐をマスク処理で高速化
         cond1 = (dist <= (cosp[idx_m] - sinp[idx_m]) / 2)
         cond2 = ((cosp[idx_m] - sinp[idx_m]) / 2 < dist) & (dist <= (cosp[idx_m] + sinp[idx_m]) / 2)
         
-        eps = 1e-10
-        denom = 2 * cosp[idx_m] * sinp[idx_m]
-        val2 = (cosp[idx_m] + sinp[idx_m] - 2 * dist) / (denom + eps)
+        val1 = 1 / (cosp[idx_m] + eps)
+        val2 = (cosp[idx_m] + sinp[idx_m] - 2 * dist) / (2 * cosp[idx_m] * sinp[idx_m] + eps)
         
         row_start = idx_m * num_s
         row_end = (idx_m + 1) * num_s
         
-        # Aに行列を流し込む
-        A[row_start:row_end, :] = np.where(cond1, 1/cosp[idx_m], np.where(cond2, val2, 0))
+        A[row_start:row_end, :] = np.where(cond1, val1, np.where(cond2, val2, 0))
         
     return A
 
 def tikhonov_optimized(img_array, angle_division, s_division, alpha, sg_error):
     figuresize = img_array.shape[0]
     
-    # 行列Aの生成
+    # 1. 行列Aの生成
     A = calc_matrixA_optimized(figuresize, angle_division, s_division)
     
-    # 画像のベクトル化
-    # 元のコードの f[j*figuresize + i] = Ffigure[i, j] は Ffigure.T.flatten() と等価
+    # 2. 元コードのベクトル f の作り方を再現
+    # 元コード: f[j * figuresize + i] = Ffigure[i, j]
+    # つまり、画像の行(y)と列(x)を入れ替えて平坦化している
     f = img_array.T.flatten().reshape(-1, 1)
     
-    # 観測データ)の生成
+    # 3. サイノグラム生成とノイズ付与
     sinogram = A @ f
     sinogram_norm = np.linalg.norm(sinogram, ord=2)
     
-    # 誤差の付与
-    noise = np.random.uniform(-1, 1, sinogram.shape)
-    noise = (sg_error * sinogram_norm / np.linalg.norm(noise, ord=2)) * noise
+    # 再現性を高めるため、シード値を固定しても良いですが、ここではrd.uniformを再現
+    noise_aux = np.random.uniform(-1, 1, sinogram.shape)
+    noise = (sg_error * sinogram_norm / np.linalg.norm(noise_aux, ord=2)) * noise_aux
     sinogram_noisy = sinogram + noise
     
-    # チコノフ正則化 (正規方程式の解)
-    print("Solving Reconstruction...")
-    # (A^T A + alpha * I) f = A^T b
+    # 4. 解く
     left = A.T @ A + alpha * np.eye(figuresize**2)
     right = A.T @ sinogram_noisy
     ft = np.linalg.solve(left, right)
     
-    # 画像の形に戻す
+    # 5. 画像の形に戻す (元コードの imgt[i, j] = ft[j * figuresize + i] を再現)
     reconstructed_img = ft.reshape(figuresize, figuresize).T
+    
     return reconstructed_img
 
 # --- 実行部分 ---

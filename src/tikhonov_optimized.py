@@ -83,19 +83,42 @@ def tikhonov_optimized(img_array, angle_division, s_division, alpha, sg_error):
     
     return reconstructed_img
 
+def run_reconstruction(bb, cc, dd, rerror, img_path='img/image.png', img_size=128, output_dir='img/optimized'):
+    """
+    画像再構成を実行する関数
+    
+    Parameters:
+    bb: 角分割数
+    cc: 位置分割数
+    dd: 正則化パラメータ
+    rerror: 誤差レベル
+    img_path: 入力画像パス
+    img_size: リサイズ後の画像サイズ
+    output_dir: 出力ディレクトリ
+    """
+    start_time = time.time()
+    
+    img_pil = Image.open(img_path).convert('L')
+    img_pil = img_pil.resize((img_size, img_size)) 
+    aa = np.array(img_pil)
+    
+    reconstruct = tikhonov_optimized(aa, bb, cc, dd, rerror)
+    
+    # クリッピング (0-255の範囲に収める)
+    pil_img = Image.fromarray(reconstruct.astype(np.uint8))
+    filename = f'{output_dir}/image_{bb}_{cc}_{int(dd)}_{int(rerror*100):03d}.png'
+    pil_img.save(filename)
+    
+    elapsed_time = time.time() - start_time
+    print(f'Saved: {filename} (Time: {elapsed_time:.2f}s)')
+    
+    return filename
+
 # --- 実行部分 ---
-start_time = time.time()
-
-img_pil = Image.open('img/image.png').convert('L')
-img_pil = img_pil.resize((128, 128)) 
-aa = np.array(img_pil)
-bb = 80 # 角分割数
-cc = 120 # 位置分割数
-dd = 100.00 # 正則化パラメータ
-rerror = 0.01 #誤差レベル
-
-reconstruct = tikhonov_optimized(aa, bb, cc, dd, rerror)
-
-# クリッピング (0-255の範囲に収める)
-pil_img = Image.fromarray(reconstruct.astype(np.uint8)) #画像として出力
-pil_img.save('img/image_er001.png')
+if __name__ == '__main__':
+    bb = 50 # 角分割数
+    cc = 120 # 位置分割数
+    dd = 100.00 # 正則化パラメータ
+    rerror = 0.01 #誤差レベル
+    
+    run_reconstruction(bb, cc, dd, rerror)

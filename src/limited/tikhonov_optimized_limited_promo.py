@@ -1,15 +1,18 @@
 import numpy as np
 from PIL import Image
 import time
+import math
 
-def calc_matrixA(figuresize, angle_division, s_division):
+def calc_matrixA(figuresize, angle_division, s_division, start_angle=-90, end_angle=90):
+    start_angle=math.radians(start_angle)
+    end_angle=math.radians(end_angle)
     domainsizemax = figuresize / 2
     num_angles = angle_division - 1
     num_s = s_division - 1
     
     # 角度とsのサンプリング
     m = np.arange(num_angles)
-    omega_aux = (-np.pi / 2) + ((m + 1) * np.pi / angle_division)
+    omega_aux = start_angle + ((m + 1) * (end_angle - start_angle) / angle_division)
     
     # omegaの計算 (ベクトル化)
     abs_omega_aux = np.abs(omega_aux)
@@ -53,11 +56,11 @@ def calc_matrixA(figuresize, angle_division, s_division):
         
     return A
 
-def tikhonov(img_array, angle_division, s_division, alpha, sg_error):
+def tikhonov(img_array, angle_division, s_division, alpha, sg_error, start_angle, end_angle):
     figuresize = img_array.shape[0]
     
     # 1. 行列Aの生成
-    A = calc_matrixA(figuresize, angle_division, s_division)
+    A = calc_matrixA(figuresize, angle_division, s_division, start_angle, end_angle)
     
     # 2. 元コードのベクトル f の作り方を再現
     # 元コード: f[j * figuresize + i] = Ffigure[i, j]
@@ -91,6 +94,8 @@ bb = 80 # 角分割数
 cc = 120 # 位置分割数
 dd = 100.00 # 正則化パラメータ
 rerror = 0.01 #誤差レベル
-reconstruct = tikhonov(aa,bb, cc, dd, rerror)
+start_angle = -10
+end_angle = 10
+reconstruct = tikhonov(aa,bb, cc, dd, rerror, start_angle, end_angle)
 pil_img = Image.fromarray(reconstruct.astype(np.uint8)) #画像として出力
-pil_img.save('img/image_optimized_promo.png')
+pil_img.save('img/limited/image_optimized_promo.png')

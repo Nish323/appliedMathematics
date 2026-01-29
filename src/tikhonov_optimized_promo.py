@@ -2,7 +2,7 @@ import numpy as np
 from PIL import Image
 import time
 
-def calc_matrixA_optimized(figuresize, angle_division, s_division):
+def calc_matrixA(figuresize, angle_division, s_division):
     domainsizemax = figuresize / 2
     num_angles = angle_division - 1
     num_s = s_division - 1
@@ -57,7 +57,7 @@ def tikhonov(img_array, angle_division, s_division, alpha, sg_error):
     figuresize = img_array.shape[0]
     
     # 1. 行列Aの生成
-    A = calc_matrixA_optimized(figuresize, angle_division, s_division)
+    A = calc_matrixA(figuresize, angle_division, s_division)
     
     # 2. 元コードのベクトル f の作り方を再現
     # 元コード: f[j * figuresize + i] = Ffigure[i, j]

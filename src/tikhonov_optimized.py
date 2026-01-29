@@ -2,7 +2,7 @@ import numpy as np
 from PIL import Image
 import time
 
-def calc_matrixA_optimized(figuresize, angle_division, s_division):
+def calc_matrixA(figuresize, angle_division, s_division):
     domainsizemax = figuresize / 2
     num_angles = angle_division - 1
     num_s = s_division - 1
@@ -53,11 +53,11 @@ def calc_matrixA_optimized(figuresize, angle_division, s_division):
         
     return A
 
-def tikhonov_optimized(img_array, angle_division, s_division, alpha, sg_error):
+def tikhonov(img_array, angle_division, s_division, alpha, sg_error):
     figuresize = img_array.shape[0]
     
     # 1. 行列Aの生成
-    A = calc_matrixA_optimized(figuresize, angle_division, s_division)
+    A = calc_matrixA(figuresize, angle_division, s_division)
     
     # 2. 元コードのベクトル f の作り方を再現
     # 元コード: f[j * figuresize + i] = Ffigure[i, j]
@@ -102,7 +102,7 @@ def run_reconstruction(bb, cc, dd, rerror, img_path='img/image.png', img_size=12
     img_pil = img_pil.resize((img_size, img_size)) 
     aa = np.array(img_pil)
     
-    reconstruct = tikhonov_optimized(aa, bb, cc, dd, rerror)
+    reconstruct = tikhonov(aa, bb, cc, dd, rerror)
     
     # クリッピング (0-255の範囲に収める)
     pil_img = Image.fromarray(reconstruct.astype(np.uint8))

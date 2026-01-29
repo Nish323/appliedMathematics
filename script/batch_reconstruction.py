@@ -1,7 +1,7 @@
 import sys
 sys.path.append('src')
 
-from tikhonov_optimized import run_reconstruction
+from tikhonov import run_reconstruction
 import time
 
 # パラメータセットのリスト

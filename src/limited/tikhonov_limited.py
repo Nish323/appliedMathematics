@@ -78,7 +78,7 @@ def tikhonov(img, angle_division, s_division, alpha, sg_error, start_angle, end_
   figuresize = img.shape[0]
   imgt = np.zeros( ( figuresize , figuresize ) )
   At = calc_matrixA(img, angle_division, s_division, start_angle, end_angle)
-  mt = calc_vectorf(img, angle_division, s_division, sg_error)
+  mt = calc_vectorf(img, angle_division, s_division, sg_error, start_angle, end_angle)
   left = (At.T) @ At + alpha * np.identity( figuresize ** 2 )
   right = (At.T) @ mt
   ft = np.linalg.solve( left , right )
@@ -96,8 +96,8 @@ bb = 80 # 角分割数
 cc = 120 # 位置分割数
 dd = 100.00 # 正則化パラメータ
 rerror = 0.01 #誤差レベル
-start_angle = -90
-end_angle = 90
+start_angle = -10
+end_angle = 10
 reconstruct = tikhonov(aa, bb, cc, dd, rerror, start_angle, end_angle)
 pil_img = Image.fromarray(reconstruct.astype(np.uint8)) #画像として出力
-pil_img.save('img/image_moto.png')
+pil_img.save('img/limited/image_moto.png')
